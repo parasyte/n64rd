@@ -1,10 +1,12 @@
 /*
-    n64gshax - 2012 Parasyte (http://www.kodewerx.org/)
+    n64rd - 2012 Parasyte (http://www.kodewerx.org/)
 
     Based on:
         GSUpload 0.3 (linux)
         An open source N64 Game Shark (tm) uploader
         based on disassembly of "Generic Uploader" and official utilities
+        By Adam Gashlin (hcs) http://gashlin.net/
+        http://n64dev.cvs.sourceforge.net/n64dev/n64dev/util/gsupload/
 
     And:
         Action Replay/GameShark Pro v3.2 Communications Protocol
