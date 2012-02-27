@@ -198,7 +198,7 @@ void cleanup(void) {
 }
 
 void *alloc(size_t size) {
-    void *p = malloc(size);
+    void *p = calloc(size, 1);
     if (!p) {
         abort();
     }
