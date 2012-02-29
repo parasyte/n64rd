@@ -23,7 +23,7 @@ Running
     By Parasyte (parasyte@kodewerx.org)
     Website: http://www.kodewerx.org/
     Build date: Feb 27 2012, 01:28:39
-    
+
     Usage: n64rd [options]
     Options:
       -h            Print usage and quit.
@@ -35,7 +35,6 @@ Running
                     Copy <length> bytes from memory <address> (to [file]).
       -w <file>     Write memory;
                     Copy from <file> to memory <address>.
-      -s            Show <length> bytes from memory <address>.
 
 Why Sudo?
 ---------

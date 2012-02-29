@@ -38,7 +38,6 @@ struct _options {
     char *read_file;
     bool write;
     char *write_file;
-    bool show;
     uint32_t address;
     uint32_t length;
 };
@@ -49,7 +48,7 @@ void parse_error(char *string, int location);
 void cleanup(void);
 void *alloc(size_t size);
 int detect(void);
-int read_data(char *filename, uint32_t address, uint32_t size, bool show);
+int read_data(char *filename, uint32_t address, uint32_t size);
 int write_data(char *filename, uint32_t address);
 void hex_dump(uint8_t *data, uint32_t address, uint32_t size);
 
@@ -71,7 +70,7 @@ int main(int argc, char **argv) {
     options.address = 0x80000000;
     options.length = 0x00400000;
 
-    while ((c = getopt(argc, argv, "hp:da:l:r::w:s")) != -1) {
+    while ((c = getopt(argc, argv, "hp:da:l:r::w:")) != -1) {
         switch (c) {
             case 'h':
                 usage();
@@ -120,10 +119,6 @@ int main(int argc, char **argv) {
                 options.write_file = optarg;
                 break;
 
-            case 's':
-                options.show = true;
-                break;
-
             case '?':
                 if ((optopt == 'p') ||
                     (optopt == 'a') ||
@@ -156,13 +151,10 @@ int main(int argc, char **argv) {
         detect();
     }
     if (options.read) {
-        read_data(options.read_file, options.address, options.length, false);
+        read_data(options.read_file, options.address, options.length);
     }
     if (options.write) {
         write_data(options.write_file, options.address);
-    }
-    if (options.show) {
-        read_data(NULL, options.address, options.length, true);
     }
 
     return 0;
@@ -180,7 +172,6 @@ void usage(void) {
     printf("                Copy <length> bytes from memory <address> (to [file]).\n");
     printf("  -w <file>     Write memory;\n");
     printf("                Copy from <file> to memory <address>.\n");
-    printf("  -s            Show <length> bytes from memory <address>.\n");
 }
 
 void parse_error(char *string, int location) {
@@ -224,7 +215,7 @@ int detect(void) {
     return 0;
 }
 
-int read_data(char *filename, uint32_t address, uint32_t size, bool show) {
+int read_data(char *filename, uint32_t address, uint32_t size) {
     FILE *fp;
     uint8_t *data = alloc(size);
     uint8_t check;
@@ -242,16 +233,15 @@ int read_data(char *filename, uint32_t address, uint32_t size, bool show) {
     GS_READ(data, address, size);
     GS_EXIT();
 
-    /* Write data to file */
     if (filename) {
+        /* Write data to file */
         /* FIXME: Add error handling */
         fp = fopen(filename, "wb");
         fwrite(data, 1, size, fp);
         fclose(fp);
     }
-
-    /* And this displays it all pretty */
-    if (show) {
+    else {
+        /* Or display it all pretty */
         hex_dump(data, address, size);
     }
 
