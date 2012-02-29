@@ -26,21 +26,55 @@
 #include "gspro.h"
 
 
+/* Handy macros */
+#define GS_MACRO_0(_FUNC) \
+    if (_FUNC()) { \
+        fprintf(stderr, "%s() " #_FUNC "() failed\n", __FUNCTION__); \
+        return 1; \
+    }
+
+#define GS_MACRO_1(_FUNC, _ARG) \
+    if (_FUNC((_ARG))) { \
+        fprintf(stderr, "%s() " #_FUNC "() failed\n", __FUNCTION__); \
+        return 1; \
+    }
+
+#define GS_MACRO_2(_FUNC, _ARG1, _ARG2) \
+    if (_FUNC((_ARG1), (_ARG2))) { \
+        fprintf(stderr, "%s() " #_FUNC "() failed, " #_ARG2 "=0x%X\n", __FUNCTION__, (_ARG2)); \
+        return 1; \
+    }
+
+#define GS_MACRO_3(_FUNC, _ARG1, _ARG2, _ARG3) \
+    if (_FUNC((_ARG1), (_ARG2), (_ARG3))) { \
+        fprintf(stderr, "%s() " #_FUNC "() failed\n", __FUNCTION__); \
+        return 1; \
+    }
+
+#define GS_ENTER()              GS_MACRO_0(gs_enter)
+#define GS_EXIT()               GS_MACRO_0(gs_exit)
+#define GS_READ(_a, _b, _c)     GS_MACRO_3(gs_read, _a, _b, _c)
+#define GS_WRITE(_a, _b, _c)    GS_MACRO_3(gs_write, _a, _b, _c)
+#define GS_WHERE(_a)            GS_MACRO_1(gs_where, _a)
+#define GS_VERSION(_a, _b, _c)  GS_MACRO_3(gs_version, _a, _b, _c)
+
+
 /* Application information */
 #define NAME "n64rd"
 #define VERSION "v0.1"
 
 /* Application options (from command line arguments) */
 struct _options {
-    uint16_t port;
-    bool detect;
-    bool read;
-    char *read_file;
-    bool write;
-    char *write_file;
-    uint32_t address;
-    uint32_t length;
+    uint16_t    port;
+    bool        detect;
+    bool        read;
+    char *      read_file;
+    bool        write;
+    char *      write_file;
+    uint32_t    address;
+    uint32_t    length;
 };
+typedef struct _options OPTIONS;
 
 
 void usage(void);
@@ -54,7 +88,8 @@ void hex_dump(uint8_t *data, uint32_t address, uint32_t size);
 
 
 int main(int argc, char **argv) {
-    struct _options options;
+    OPTIONS options;
+    GS_CONFIG config;
     char *err = 0;
     int c;
 
@@ -140,7 +175,11 @@ int main(int argc, char **argv) {
     }
 
     printf("Using port 0x%04X...\n", options.port);
-    if (gs_init(options.port)) {
+
+    memset(&config, 0, sizeof(GS_CONFIG));
+    config.port = options.port;
+
+    if (gs_init(&config)) {
         ERRORPRINT("%s\n", "gs_init() failed");
         return 1;
     }
@@ -314,4 +353,3 @@ void hex_dump(uint8_t *data, uint32_t address, uint32_t size) {
 
     printf("\n");
 }
-
