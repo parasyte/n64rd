@@ -16,7 +16,7 @@
     #include <fcntl.h>
 
     /* Private variables */
-    int _gs_port_fd = 0;
+    int _gs_port_fd = -1;
     int _gs_port_mode = 0;
 #else /* !define(_WIN32) */
     /* Other UNIX-like environments */
@@ -295,6 +295,7 @@ GS_STATUS gs_init(GS_CONFIG *config) {
         if (ioctl(_gs_port_fd, PPCLAIM, NULL)) {
             ERRORPRINT("Could not claim '%s'\n", _gs_config.port_dev);
             close(_gs_port_fd);
+            _gs_port_fd = -1;
 
             return GS_ERROR;
         }
@@ -304,6 +305,7 @@ GS_STATUS gs_init(GS_CONFIG *config) {
             ERRORPRINT("Could not set nibble mode for '%s'\n", _gs_config.port_dev);
             ioctl(_gs_port_fd, PPRELEASE);
             close(_gs_port_fd);
+            _gs_port_fd = -1;
 
             return GS_ERROR;
         }
@@ -338,7 +340,7 @@ GS_STATUS gs_quit(void) {
         /* Linux */
         ioctl(_gs_port_fd, PPRELEASE);
         close(_gs_port_fd);
-        _gs_port_fd = 0;
+        _gs_port_fd = -1;
     #else /* !defined(_WIN32) */
         /* Other UNIX-like environments */
         ioperm(_GS_LPT_DATA, 2, 0);
