@@ -66,6 +66,7 @@
 /* Application options (from command line arguments) */
 struct _options {
     uint16_t    port;
+    char *      port_dev;
     bool        detect;
     bool        read;
     char *      read_file;
@@ -101,7 +102,6 @@ int main(int argc, char **argv) {
 
     /* Default option */
     memset(&options, 0, sizeof(options));
-    options.port = 0x378;
     options.address = 0x80000000;
     options.length = 0x00400000;
 
@@ -114,9 +114,7 @@ int main(int argc, char **argv) {
             case 'p':
                 options.port = strtol(optarg, &err, 0);
                 if (err[0]) {
-                    fprintf(stderr, "Invalid port number\n");
-                    parse_error(optarg, (err - optarg));
-                    return 1;
+                    options.port_dev = optarg;
                 }
                 break;
 
@@ -178,6 +176,7 @@ int main(int argc, char **argv) {
 
     memset(&config, 0, sizeof(GS_CONFIG));
     config.port = options.port;
+    config.port_dev = options.port_dev;
 
     if (gs_init(&config)) {
         ERRORPRINT("%s\n", "gs_init() failed");
@@ -204,6 +203,8 @@ void usage(void) {
     printf("Options:\n");
     printf("  -h            Print usage and quit.\n");
     printf("  -p <port>     Specify port number (default 0x378).\n");
+    printf("                Linux systems with PPDev can use a path.\n");
+    printf("                e.g. \"/dev/parport0\"\n");
     printf("  -d            Detect GS firmware version.\n");
     printf("  -a <address>  Specify address (default 0x80000000).\n");
     printf("  -l <length>   Specify length (default 0x00400000).\n");
@@ -254,10 +255,24 @@ int detect(void) {
     return 0;
 }
 
+void callback(int range, uint32_t size) {
+    printf(".");
+    fflush(stdout);
+}
+
 int read_data(char *filename, uint32_t address, uint32_t size) {
     FILE *fp;
     uint8_t *data = alloc(size);
     uint8_t check;
+    GS_RANGE range[2] = {
+        {
+            address,
+            size
+        },
+        {
+            0, 0
+        }
+    };
 
     /* Verify GS is in-game */
     GS_ENTER();
@@ -269,8 +284,10 @@ int read_data(char *filename, uint32_t address, uint32_t size) {
 
     /* The actual read happens here */
     GS_ENTER();
-    GS_READ(data, address, size);
+    GS_READ(data, range, callback);
     GS_EXIT();
+
+    printf("\n");
 
     if (filename) {
         /* Write data to file */
@@ -291,9 +308,9 @@ int read_data(char *filename, uint32_t address, uint32_t size) {
 
 int write_data(char *filename, uint32_t address) {
     FILE *fp;
-    uint32_t size;
     uint8_t *data;
     uint8_t check;
+    GS_RANGE range[2] = { { 0 } };
 
     /* Verify GS is in-game */
     GS_ENTER();
@@ -307,16 +324,18 @@ int write_data(char *filename, uint32_t address) {
     /* FIXME: Add error handling */
     fp = fopen(filename, "rb");
     fseek(fp, 0, SEEK_END);
-    size = ftell(fp);
-    data = alloc(size);
+    range[0].size = ftell(fp);
+    data = alloc(range[0].size);
     fseek(fp, 0, SEEK_SET);
-    fread(data, 1, size, fp);
+    fread(data, 1, range[0].size, fp);
     fclose(fp);
 
     /* The actual write happens here */
     GS_ENTER();
-    GS_WRITE(data, address, size);
+    GS_WRITE(data, range, callback);
     GS_EXIT();
+
+    printf("\n");
 
     free(data);
 

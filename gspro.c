@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -72,6 +73,7 @@ void _gs_cmd(GS_COMMAND cmd);
 uint8_t _gs_exch_4(uint8_t out);
 uint8_t _gs_exch_8(uint8_t out);
 uint32_t _gs_exch_32(uint32_t out);
+void _gs_mem(uint8_t *data, GS_RANGE *range, void (*callback)(int, uint32_t), bool write);
 
 
 /* Private functions */
@@ -184,6 +186,74 @@ void _gs_cmd(GS_COMMAND cmd) {
     _gs_exch_8(cmd);
 }
 
+/* Send or receive data using READ or WRITE command */
+void _gs_mem(uint8_t *data, GS_RANGE *range, void (*callback)(int, uint32_t), bool write) {
+    int i = 0;
+    int count = 0;
+    uint8_t sum = 0;
+    uint8_t calc_sum = 0;
+    static char error[80] = { 0 };
+
+    _gs_cmd(write ? GS_CMD_WRITE : GS_CMD_READ);
+
+    while (range[count].address && range[count].size) {
+        /* Send address */
+        DEBUGPRINT("Address: 0x%08X\n", range[count].address);
+        _gs_exch_32(range[count].address);
+
+        /* Send data size */
+        DEBUGPRINT("Size: 0x%08X\n", range[count].size);
+        _gs_exch_32(range[count].size);
+
+        /* Read data */
+        for (i = 0; i < range[count].size; i++) {
+            /* Run callback periodically */
+            if (callback && i && (!(i & 0x3FFF))) {
+                callback(count, i);
+            }
+
+            if (write) {
+                _gs_exch_8(data[i]);
+            }
+            else {
+                data[i] = _gs_exch_8(0);
+            }
+
+            sum += data[i];
+        }
+
+        count++;
+    }
+
+    /* Final callback */
+    if (callback) {
+        callback(count, i);
+    }
+
+    /* Send a null address and size to exit the read loop */
+    DEBUGPRINT("Address: 0x%08X\n", 0);
+    _gs_exch_32(0);
+
+    DEBUGPRINT("Size: 0x%08X\n", 0);
+    _gs_exch_32(0);
+
+    /* Verify */
+    calc_sum = _gs_exch_8(0);
+    if (calc_sum != sum) {
+        sprintf(error, "Checksum failure during %s:\n"
+            "  Received: 0x%02X\n"
+            "  Expected: 0x%02X\n",
+            (write ? "write" : "read"), calc_sum, sum);
+
+        Exception e = {
+            EXCEPTION_INFO,
+            GS_TimeoutException,
+            error
+        };
+        _throw(e);
+    }
+}
+
 
 /* Public functions */
 
@@ -282,6 +352,8 @@ GS_STATUS gs_enter(void) {
     int timeout = 1000;
     uint8_t result = 0;
 
+    DEBUGPRINT("%s\n", "Entering...");
+
     _try (e) {
         while (--timeout) {
             /*
@@ -310,7 +382,7 @@ GS_STATUS gs_enter(void) {
 /* Exit PC-control */
 GS_STATUS gs_exit(void) {
     _try (e) {
-        _gs_cmd(GS_CMD_EXIT);
+        _gs_cmd(GS_CMD_UNPAUSE);
     }
     _catch {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
@@ -322,41 +394,9 @@ GS_STATUS gs_exit(void) {
 }
 
 /* Read CPU memory */
-GS_STATUS gs_read(uint8_t *in, uint32_t address, uint32_t size) {
-    int i;
-    uint8_t sum = 0;
-    uint8_t calc_sum = 0;
-
+GS_STATUS gs_read(uint8_t *in, GS_RANGE *range, void (*callback)(int, uint32_t)) {
     _try (e) {
-        _gs_cmd(GS_CMD_READ);
-
-        /* Send address */
-        DEBUGPRINT("Address: 0x%08X\n", address);
-        _gs_exch_32(address);
-
-        /* Send data size */
-        DEBUGPRINT("Size: 0x%08X\n", size);
-        _gs_exch_32(size);
-
-        /* Read data */
-        for (i = 0; i < size; i++) {
-            in[i] = _gs_exch_8(0);
-            sum += in[i];
-        }
-
-        /* Send a null address and size to exit the read loop */
-        _gs_exch_32(0);
-        _gs_exch_32(0);
-
-        /* Verify */
-        calc_sum = _gs_exch_8(0);
-        if (calc_sum != sum) {
-            ERRORPRINT("Checksum failure during read:\n"
-                       "  Received: 0x%02X\n"
-                       "  Expected: 0x%02X\n", sum, calc_sum);
-
-            //return GS_ERROR;
-        }
+        _gs_mem(in, range, callback, false);
     }
     _catch {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
@@ -368,41 +408,9 @@ GS_STATUS gs_read(uint8_t *in, uint32_t address, uint32_t size) {
 }
 
 /* Write CPU memory */
-GS_STATUS gs_write(uint8_t *out, uint32_t address, uint32_t size) {
-    int i;
-    uint8_t sum = 0;
-    uint8_t calc_sum = 0;
-
+GS_STATUS gs_write(uint8_t *out, GS_RANGE *range, void (*callback)(int, uint32_t)) {
     _try (e) {
-        _gs_cmd(GS_CMD_WRITE);
-
-        /* Send address */
-        DEBUGPRINT("Address: 0x%08X\n", address);
-        _gs_exch_32(address);
-
-        /* Send data size */
-        DEBUGPRINT("Size: 0x%08X\n", size);
-        _gs_exch_32(size);
-
-        /* Write data */
-        for (i = 0; i < size; i++) {
-            _gs_exch_8(out[i]);
-            sum += out[i];
-        }
-
-        /* Send a null address and size to exit the read loop */
-        _gs_exch_32(0);
-        _gs_exch_32(0);
-
-        /* Verify */
-        calc_sum = _gs_exch_8(0);
-        if (calc_sum != sum) {
-            ERRORPRINT("Checksum failure during read:\n"
-                       "  Received: 0x%02X"
-                       "  Expected: 0x%02X", calc_sum, sum);
-
-            return GS_ERROR;
-        }
+        _gs_mem(out, range, callback, true);
     }
     _catch {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);

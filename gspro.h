@@ -19,13 +19,27 @@ struct _gs_config {
 };
 typedef struct _gs_config GS_CONFIG;
 
+/* Range structure for READ & WRITE commands */
+struct _gs_range {
+    uint32_t address;
+    uint32_t size;
+};
+typedef struct _gs_range GS_RANGE;
+
+
 /* GameShark commands */
 enum _gs_commands {
-    GS_CMD_READ     = 0x01,
-    GS_CMD_WRITE    = 0x02,
-    GS_CMD_EXIT     = 0x64,
-    GS_CMD_WHERE    = 0x65,
-    GS_CMD_VERSION  = 0x66
+    GS_CMD_PAUSE        = 0x00, /* Unimplemented */
+    GS_CMD_READ         = 0x01,
+    GS_CMD_WRITE        = 0x02,
+    GS_CMD_UNPAUSE      = 0x64,
+    GS_CMD_WHERE        = 0x65,
+    GS_CMD_VERSION      = 0x66,
+    GS_CMD_ADD_CODE     = 0x69, /* Unimplemented */
+    GS_CMD_COUNT_CODES  = 0x6A, /* Unimplemented */
+    GS_CMD_GET_CODES    = 0x70, /* Unimplemented */
+    GS_CMD_SCREEN_SHOT  = 0x72, /* Unimplemented */
+    GS_CMD_READ_ROM     = 0x7F  /* Unimplemented */
 };
 typedef enum _gs_commands GS_COMMAND;
 
@@ -48,8 +62,8 @@ GS_STATUS gs_init(GS_CONFIG *config);
 GS_STATUS gs_quit(void);
 GS_STATUS gs_enter(void);
 GS_STATUS gs_exit(void);
-GS_STATUS gs_read(uint8_t *in, uint32_t address, uint32_t size);
-GS_STATUS gs_write(uint8_t *out, uint32_t address, uint32_t size);
+GS_STATUS gs_read(uint8_t *in, GS_RANGE *range, void (*callback)(int, uint32_t));
+GS_STATUS gs_write(uint8_t *out, GS_RANGE *range, void (*callback)(int, uint32_t));
 GS_STATUS gs_where(uint8_t *out);
 GS_STATUS gs_version(uint8_t *size, char *version, int buf_size);
 

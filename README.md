@@ -36,6 +36,8 @@ Running
     Options:
       -h            Print usage and quit.
       -p <port>     Specify port number (default 0x378).
+                    Linux systems with PPDev can use a path.
+                    e.g. "/dev/parport0"
       -d            Detect GS firmware version.
       -a <address>  Specify address (default 0x80000000).
       -l <length>   Specify length (default 0x00400000).
