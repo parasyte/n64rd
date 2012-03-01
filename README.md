@@ -7,13 +7,21 @@ Nintendo 64 Remote Debugger
 Building
 --------
 
+Requirements:
+
+* [SCons](http://www.scons.org/) - Build system
+
 To build a release version:
 
-    $ gcc -Wall -o n64rd gspro.c n64rd.c
+    $ scons
 
 To build a debug version:
 
-    $ gcc -DDEBUG -Wall -o n64rd gspro.c n64rd.c
+    $ scons debug=1
+
+To clean:
+
+    $ scons -c
 
 Running
 -------
