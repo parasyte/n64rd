@@ -7,8 +7,18 @@
 #if defined(_WIN32)
     /* Windows, including 64-bit */
     /* UNIMPLEMENTED */
+#elif defined(linux)
+    /* Linux */
+    #include <sys/ioctl.h>
+    #include <linux/parport.h>
+    #include <linux/ppdev.h>
+    #include <fcntl.h>
+
+    /* Private variables */
+    int _gs_port_fd = 0;
+    int _gs_port_mode = 0;
 #else /* !define(_WIN32) */
-    /* Linux, and other UNIX-like environments */
+    /* Other UNIX-like environments */
     #include <sys/io.h>
 #endif /* defined(_WIN32) */
 
@@ -71,6 +81,14 @@ uint8_t _gs_in(uint16_t port) {
     #if defined(_WIN32)
         /* Windows, including 64-bit */
         UNIMPLEMENTED();
+
+        return 0;
+    #elif defined(linux)
+        /* Linux */
+        uint8_t data;
+        ioctl(_gs_port_fd, PPRSTATUS, &data);
+
+        return data;
     #else /* !defined(_WIN32) */
         /* Linux, and other UNIX-like environments */
         return inb(port);
@@ -82,6 +100,9 @@ void _gs_out(uint8_t data, uint16_t port) {
     #if defined(_WIN32)
         /* Windows, including 64-bit */
         UNIMPLEMENTED();
+    #elif defined(linux)
+        /* Linux */
+        ioctl(_gs_port_fd, PPWDATA, &data);
     #else /* !defined(_WIN32) */
         /* Linux, and other UNIX-like environments */
         outb(data, port);
@@ -185,11 +206,39 @@ GS_STATUS gs_init(GS_CONFIG *config) {
     }
 
     #if defined(_WIN32)
+        /* Windows, including 64-bit */
         /* Do not use the UNIMPLEMENTED() macro here; no try/catch sugar */
         ERRORPRINT("%s\n", "UNIMPLEMENTED");
 
         return GS_ERROR;
+    #elif defined (linux)
+        /* Linux */
+        assert(_gs_config.port_dev);
+
+        _gs_port_fd = open(_gs_config.port_dev, O_RDWR);
+        if (_gs_port_fd == -1) {
+            ERRORPRINT("Unable to open '%s' for read/write\n", _gs_config.port_dev);
+
+            return GS_ERROR;
+        }
+
+        if (ioctl(_gs_port_fd, PPCLAIM, NULL)) {
+            ERRORPRINT("Could not claim '%s'\n", _gs_config.port_dev);
+            close(_gs_port_fd);
+
+            return GS_ERROR;
+        }
+
+        int _gs_port_mode = IEEE1284_MODE_NIBBLE;
+        if (ioctl(_gs_port_fd, PPSETMODE, &_gs_port_mode)) {
+            ERRORPRINT("Could not set nibble mode for '%s'\n", _gs_config.port_dev);
+            ioctl(_gs_port_fd, PPRELEASE);
+            close(_gs_port_fd);
+
+            return GS_ERROR;
+        }
     #else /* !defined(_WIN32) */
+        /* Other UNIX-like environments */
         if (ioperm(_GS_LPT_DATA, 2, 1)) {
             ERRORPRINT("%s\n", "Couldn't get LPT, are you root?");
 
@@ -210,11 +259,18 @@ GS_STATUS gs_quit(void) {
     _gs_config.out_callback = NULL;
 
     #if defined(_WIN32)
+        /* Windows, including 64-bit */
         /* Do not use the UNIMPLEMENTED() macro here; no try/catch sugar */
         ERRORPRINT("%s\n", "UNIMPLEMENTED");
 
         return GS_ERROR;
+    #elif defined (linux)
+        /* Linux */
+        ioctl(_gs_port_fd, PPRELEASE);
+        close(_gs_port_fd);
+        _gs_port_fd = 0;
     #else /* !defined(_WIN32) */
+        /* Other UNIX-like environments */
         ioperm(_GS_LPT_DATA, 2, 0);
     #endif /* defined(_WIN32) */
 

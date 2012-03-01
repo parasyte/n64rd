@@ -26,7 +26,7 @@ To clean:
 Running
 -------
 
-    $ sudo n64rd -h
+    $ n64rd -h
     n64rd v0.1
     By Parasyte (parasyte@kodewerx.org)
     Website: http://www.kodewerx.org/
@@ -43,12 +43,3 @@ Running
                     Copy <length> bytes from memory <address> (to [file]).
       -w <file>     Write memory;
                     Copy from <file> to memory <address>.
-
-Why Sudo?
----------
-
-Because I'm lazy. ;) There's a better way to access the parallel port under
-Linux, using the special /dev/parport0 character device and ioctl().
-
-See: [User-level device drivers](http://people.redhat.com/twaugh/parport/html/ppdev.html).
-
