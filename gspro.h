@@ -1,4 +1,11 @@
 
+#ifndef _GSPRO_H_
+#define _GSPRO_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include <stdint.h>
 #include <stdio.h>
 
@@ -58,3 +65,9 @@ GS_STATUS gs_version(uint8_t *size, char *version, int buf_size);
 
 #define ERRORPRINT(_fmt, ...) \
     fprintf(stderr, "%s:%d, %s() ERROR: " _fmt, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* _GSPRO_H_ */

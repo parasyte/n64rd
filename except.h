@@ -1,4 +1,7 @@
 
+#ifndef _EXCEPT_H_
+#define _EXCEPT_H_
+
 #include <setjmp.h>
 
 
@@ -27,3 +30,5 @@ typedef struct _exception Exception;
     longjmp(_exception_env, (int)&_e)
 
 #define EXCEPTION_INFO __FILE__, __LINE__, __FUNCTION__
+
+#endif /* _EXCEPT_H_ */
