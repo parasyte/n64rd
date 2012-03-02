@@ -55,6 +55,7 @@ enum _exception_types {
 
 
 /* Private variables */
+static int _gs_ready = 0;
 static GS_CONFIG _gs_config = { 0 };
 
 
@@ -259,6 +260,10 @@ void _gs_mem(uint8_t *data, GS_RANGE *range, void (*callback)(int, uint32_t), bo
 
 /* Initialize the library */
 GS_STATUS gs_init(GS_CONFIG *config) {
+    if (_gs_ready) {
+        return GS_SUCCESS;
+    }
+
     _gs_config.port = _GS_DEFAULT_PORT;
     _gs_config.port_dev = _GS_DEFAULT_PORT_DEV;
     _gs_config.in_callback = _gs_in;
@@ -318,11 +323,23 @@ GS_STATUS gs_init(GS_CONFIG *config) {
         }
     #endif /* defined(_WIN32) */
 
+    _gs_ready++;
+
     return GS_SUCCESS;
 }
 
 /* Finish library calls */
 GS_STATUS gs_quit(void) {
+    assert(_gs_ready);
+
+    if (_gs_ready > 0) {
+        _gs_ready--;
+
+        if (_gs_ready > 0) {
+            return GS_SUCCESS;
+        }
+    }
+
     _gs_config.out_callback(0, _GS_LPT_DATA);
 
     _gs_config.port = 0;
@@ -354,6 +371,8 @@ GS_STATUS gs_enter(void) {
     int timeout = 1000;
     uint8_t result = 0;
 
+    assert(_gs_ready);
+
     DEBUGPRINT("%s\n", "Entering...");
 
     _try (e) {
@@ -383,6 +402,8 @@ GS_STATUS gs_enter(void) {
 
 /* Exit PC-control */
 GS_STATUS gs_exit(void) {
+    assert(_gs_ready);
+
     _try (e) {
         _gs_cmd(GS_CMD_UNPAUSE);
     }
@@ -397,6 +418,8 @@ GS_STATUS gs_exit(void) {
 
 /* Read CPU memory */
 GS_STATUS gs_read(uint8_t *in, GS_RANGE *range, void (*callback)(int, uint32_t)) {
+    assert(_gs_ready);
+
     _try (e) {
         _gs_mem(in, range, callback, false);
     }
@@ -411,6 +434,8 @@ GS_STATUS gs_read(uint8_t *in, GS_RANGE *range, void (*callback)(int, uint32_t))
 
 /* Write CPU memory */
 GS_STATUS gs_write(uint8_t *out, GS_RANGE *range, void (*callback)(int, uint32_t)) {
+    assert(_gs_ready);
+
     _try (e) {
         _gs_mem(out, range, callback, true);
     }
@@ -425,6 +450,8 @@ GS_STATUS gs_write(uint8_t *out, GS_RANGE *range, void (*callback)(int, uint32_t
 
 /* Discover GS run mode (and exit PC-control) */
 GS_STATUS gs_where(uint8_t *out) {
+    assert(_gs_ready);
+
     _try (e) {
         _gs_cmd(GS_CMD_WHERE);
 
@@ -445,8 +472,8 @@ GS_STATUS gs_version(uint8_t *size, char *version, int buf_size) {
     int i;
     uint8_t buf = 0;
 
-    /* We need a buffer with valid size */
-    assert(buf_size > 0);
+    assert(_gs_ready);
+    assert(buf_size > 0); /* We need a buffer with valid size */
 
     _try (e) {
         _gs_cmd(GS_CMD_VERSION);
