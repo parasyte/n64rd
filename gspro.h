@@ -39,7 +39,7 @@ enum _gs_commands {
     GS_CMD_COUNT_CODES  = 0x6A, /* Unimplemented */
     GS_CMD_GET_CODES    = 0x70, /* Unimplemented */
     GS_CMD_SCREEN_SHOT  = 0x72, /* Unimplemented */
-    GS_CMD_READ_ROM     = 0x7F  /* Unimplemented */
+    GS_CMD_READ_ROM     = 0x7F
 };
 typedef enum _gs_commands GS_COMMAND;
 
@@ -66,6 +66,7 @@ GS_STATUS gs_read(uint8_t *in, GS_RANGE *range, void (*callback)(int, uint32_t))
 GS_STATUS gs_write(uint8_t *out, GS_RANGE *range, void (*callback)(int, uint32_t));
 GS_STATUS gs_where(uint8_t *out);
 GS_STATUS gs_version(uint8_t *size, char *version, int buf_size);
+GS_STATUS gs_read_rom(uint8_t *data, GS_RANGE *range, void (*callback)(uint32_t));
 
 
 /* Handy macros */

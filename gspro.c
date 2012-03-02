@@ -227,7 +227,7 @@ void _gs_mem(uint8_t *data, GS_RANGE *range, void (*callback)(int, uint32_t), bo
     }
 
     /* Final callback */
-    if (callback) {
+    if (callback && (i & 0x3FFF)) {
         callback(count, i);
     }
 
@@ -507,6 +507,60 @@ GS_STATUS gs_version(uint8_t *size, char *version, int buf_size) {
     }
     _catch {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
+
+        return GS_ERROR;
+    }
+
+    return GS_SUCCESS;
+}
+
+/* Read CPU memory 32-bits at a time (and exit PC-control) */
+GS_STATUS gs_read_rom(uint8_t *data, GS_RANGE *range, void (*callback)(uint32_t)) {
+    int i = 0;
+    uint8_t sum = 0;
+    uint8_t calc_sum = 0;
+    uint32_t word = 0;
+
+    _gs_cmd(GS_CMD_READ_ROM);
+
+    /* Send address */
+    range->address &= ~3;
+    DEBUGPRINT("Address: 0x%08X\n", range->address);
+    _gs_exch_32(range->address);
+
+    /* Send data size */
+    range->size = (range->size + 3) & ~3;
+    DEBUGPRINT("Size: 0x%08X\n", range->size);
+    _gs_exch_32(range->size);
+
+    /* Read data */
+    for (i = 0; i < range->size; i += 4) {
+        /* Run callback periodically */
+        if (callback && i && (!(i & 0x3FFF))) {
+            callback(i);
+        }
+
+        word = _gs_exch_32(0);
+        sum += word;
+
+        data[i + 0] = word >> 24;
+        data[i + 1] = word >> 16;
+        data[i + 2] = word >> 8;
+        data[i + 3] = word >> 0;
+    }
+
+    /* Final callback */
+    if (callback && (i & 0x3FFF)) {
+        callback(i);
+    }
+
+    /* Verify */
+    calc_sum = _gs_exch_8(0);
+    if (calc_sum != sum) {
+        ERRORPRINT("Checksum failure during ROM read:\n"
+            "  Received: 0x%02X\n"
+            "  Expected: 0x%02X\n",
+            calc_sum, sum);
 
         return GS_ERROR;
     }

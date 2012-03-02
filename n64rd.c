@@ -57,6 +57,7 @@
 #define GS_WRITE(_a, _b, _c)    GS_MACRO_3(gs_write, _a, _b, _c)
 #define GS_WHERE(_a)            GS_MACRO_1(gs_where, _a)
 #define GS_VERSION(_a, _b, _c)  GS_MACRO_3(gs_version, _a, _b, _c)
+#define GS_READ_ROM(_a, _b, _c) GS_MACRO_3(gs_read_rom, _a, _b, _c)
 
 
 /* Application information */
@@ -70,6 +71,7 @@ struct _options {
     bool        detect;
     bool        read;
     char *      read_file;
+    bool        read_word;
     bool        write;
     char *      write_file;
     uint32_t    address;
@@ -83,7 +85,7 @@ void parse_error(char *string, int location);
 void cleanup(void);
 void *alloc(size_t size);
 int detect(void);
-int read_data(char *filename, uint32_t address, uint32_t size);
+int read_data(char *filename, uint32_t address, uint32_t size, bool word);
 int write_data(char *filename, uint32_t address);
 void hex_dump(uint8_t *data, uint32_t address, uint32_t size);
 
@@ -105,7 +107,7 @@ int main(int argc, char **argv) {
     options.address = 0x80000000;
     options.length = 0x00400000;
 
-    while ((c = getopt(argc, argv, "hp:da:l:r::w:")) != -1) {
+    while ((c = getopt(argc, argv, "hp:va:l:d::r::w:")) != -1) {
         switch (c) {
             case 'h':
                 usage();
@@ -118,7 +120,7 @@ int main(int argc, char **argv) {
                 }
                 break;
 
-            case 'd':
+            case 'v':
                 options.detect = true;
                 break;
 
@@ -140,10 +142,14 @@ int main(int argc, char **argv) {
                 }
                 break;
 
+            case 'd':
             case 'r':
                 options.read = true;
                 if (optarg) {
                     options.read_file = optarg;
+                }
+                if (c == 'd') {
+                    options.read_word = true;
                 }
                 break;
 
@@ -172,7 +178,12 @@ int main(int argc, char **argv) {
         }
     }
 
-    printf("Using port 0x%04X...\n", options.port);
+    if (options.port) {
+        printf("Using port 0x%04X...\n", options.port);
+    }
+    else if (options.port_dev) {
+        printf("Using port %s...\n", options.port_dev);
+    }
 
     memset(&config, 0, sizeof(GS_CONFIG));
     config.port = options.port;
@@ -189,7 +200,7 @@ int main(int argc, char **argv) {
         detect();
     }
     if (options.read) {
-        read_data(options.read_file, options.address, options.length);
+        read_data(options.read_file, options.address, options.length, options.read_word);
     }
     if (options.write) {
         write_data(options.write_file, options.address);
@@ -205,9 +216,11 @@ void usage(void) {
     printf("  -p <port>     Specify port number (default 0x378).\n");
     printf("                Linux systems with PPDev can use a path.\n");
     printf("                e.g. \"/dev/parport0\"\n");
-    printf("  -d            Detect GS firmware version.\n");
+    printf("  -v            Detect GS firmware version.\n");
     printf("  -a <address>  Specify address (default 0x80000000).\n");
     printf("  -l <length>   Specify length (default 0x00400000).\n");
+    printf("  -d[file]      Dump memory 32-bits at a time;\n");
+    printf("                Copy <length> bytes from memory <address> (to [file]).\n");
     printf("  -r[file]      Read memory;\n");
     printf("                Copy <length> bytes from memory <address> (to [file]).\n");
     printf("  -w <file>     Write memory;\n");
@@ -255,12 +268,20 @@ int detect(void) {
     return 0;
 }
 
+uint8_t *callback_data = NULL;
+uint32_t callback_address = 0;
+uint32_t callback_size = 0;
 void callback(int range, uint32_t size) {
     printf(".");
     fflush(stdout);
 }
 
-int read_data(char *filename, uint32_t address, uint32_t size) {
+void callback2(uint32_t size) {
+    hex_dump(&callback_data[callback_size], (callback_address + callback_size), (size - callback_size));
+    callback_size = size;
+}
+
+int read_data(char *filename, uint32_t address, uint32_t size, bool word) {
     FILE *fp;
     uint8_t *data = alloc(size);
     uint8_t check;
@@ -274,18 +295,27 @@ int read_data(char *filename, uint32_t address, uint32_t size) {
         }
     };
 
-    /* Verify GS is in-game */
     GS_ENTER();
-    GS_WHERE(&check);
-    if (check != GS_WHERE_GAME) {
-        fprintf(stderr, "Read is only available while in-game\n");
-        return 1;
-    }
 
-    /* The actual read happens here */
-    GS_ENTER();
-    GS_READ(data, range, callback);
-    GS_EXIT();
+    if (word) {
+        callback_data = data;
+        callback_address = address;
+        callback_size = 0;
+        GS_READ_ROM(data, range, callback2);
+    }
+    else {
+        /* Verify GS is in-game */
+        GS_WHERE(&check);
+        if (check != GS_WHERE_GAME) {
+            fprintf(stderr, "Read is only available while in-game\n");
+            return 1;
+        }
+
+        /* The actual read happens here */
+        GS_ENTER();
+        GS_READ(data, range, callback);
+        GS_EXIT();
+    }
 
     printf("\n");
 
