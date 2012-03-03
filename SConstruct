@@ -16,5 +16,5 @@ env = conf.Finish()
 
 ## Build
 env.Program([
-    "n64rd.c", "gspro.c"
+    "n64rd.c", "gspro.c", "except.c"
 ])

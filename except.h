@@ -3,6 +3,7 @@
 #define _EXCEPT_H_
 
 #include <setjmp.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -19,10 +20,16 @@ struct _exception {
 };
 typedef struct _exception Exception;
 
-static jmp_buf _exception_env;
-static Exception _exception_list[16] = { { 0 } };
-static int _exception_stack = 0;
 
+#define _EXCEPTION_LIST_SIZE 16
+
+/* Protected variables */
+extern jmp_buf _exception_env;
+extern Exception _exception_list[_EXCEPTION_LIST_SIZE];
+extern int _exception_stack;
+
+
+/* Syntactic sugar! Yum! */
 #define _try \
     if (!setjmp(_exception_env))
 
@@ -34,7 +41,7 @@ static int _exception_stack = 0;
     if (_e)
 
 #define _throw(_e) \
-    if (_exception_stack >= (sizeof(_exception_list) / sizeof(Exception)) - 1) { \
+    if (_exception_stack >= _EXCEPTION_LIST_SIZE) { \
         fprintf(stderr, "FATAL: TOO MANY NESTED EXCEPTIONS\n"); \
         abort(); \
     } \
