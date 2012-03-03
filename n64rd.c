@@ -261,7 +261,7 @@ int detect(void) {
 
     if (version_size >= sizeof(version)) {
         DEBUGPRINT("%s\n", "Version string overflow:");
-        DEBUGPRINT("%d bytes required, %d bytes available\n", version_size + 1, sizeof(version));
+        DEBUGPRINT("%d bytes required, %lu bytes available\n", version_size + 1, sizeof(version));
     }
     printf("Detected: %s\n", version);
 

@@ -1,10 +1,20 @@
-CFLAGS="-Wall"
+CCFLAGS="-Wall"
 
+## Enable debug mode
 if ARGUMENTS.get('debug', 0):
-    env = Environment(CCFLAGS=CFLAGS + " -g -DDEBUG")
-else:
-    env = Environment(CCFLAGS=CFLAGS)
+    CCFLAGS += " -g -DDEBUG"
 
+## Acquire a configure environment
+env = Environment(CCFLAGS=CCFLAGS)
+conf = Configure(env)
+
+## Run configuration
+if conf.CheckHeader('sys/io.h'):
+    conf.env.Append(CCFLAGS=' -DHAS_SYSIO_H')
+
+env = conf.Finish()
+
+## Build
 env.Program([
     "n64rd.c", "gspro.c"
 ])

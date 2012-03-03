@@ -18,9 +18,12 @@
     /* Private variables */
     int _gs_port_fd = -1;
     int _gs_port_mode = 0;
-#else /* !define(_WIN32) */
-    /* Other UNIX-like environments */
+#elif defined(HAS_SYSIO_H)
+    /* Other UNIX-like environments with low-level IO */
     #include <sys/io.h>
+#else /* !defined(_WIN32) */
+    /* Unknown, unsupported */
+    /* UNIMPLEMENTED */
 #endif /* defined(_WIN32) */
 
 #include "gspro.h"
@@ -92,9 +95,12 @@ uint8_t _gs_in(uint16_t port) {
         ioctl(_gs_port_fd, PPRSTATUS, &data);
 
         return data;
-    #else /* !defined(_WIN32) */
-        /* Linux, and other UNIX-like environments */
+    #elif defined(HAS_SYSIO_H)
+        /* Other UNIX-like environments with low-level IO */
         return inb(port);
+    #else /* !defined(_WIN32) */
+        /* Unknown, unsupported */
+        UNIMPLEMENTED();
     #endif /* defined(_WIN32) */
 }
 
@@ -106,9 +112,12 @@ void _gs_out(uint8_t data, uint16_t port) {
     #elif defined(linux)
         /* Linux */
         ioctl(_gs_port_fd, PPWDATA, &data);
-    #else /* !defined(_WIN32) */
-        /* Linux, and other UNIX-like environments */
+    #elif defined(HAS_SYSIO_H)
+        /* Other UNIX-like environments with low-level IO */
         outb(data, port);
+    #else /* !defined(_WIN32) */
+        /* Unknown, unsupported */
+        UNIMPLEMENTED();
     #endif /* defined(_WIN32) */
 }
 
@@ -314,13 +323,19 @@ GS_STATUS gs_init(GS_CONFIG *config) {
 
             return GS_ERROR;
         }
-    #else /* !defined(_WIN32) */
-        /* Other UNIX-like environments */
+    #elif defined(HAS_SYSIO_H)
+        /* Other UNIX-like environments with low-level IO */
         if (ioperm(_GS_LPT_DATA, 2, 1)) {
             ERRORPRINT("%s\n", "Couldn't get LPT, are you root?");
 
             return GS_ERROR;
         }
+    #else /* !defined(_WIN32) */
+        /* Unknown, unsupported */
+        /* Do not use the UNIMPLEMENTED() macro here; no try/catch sugar */
+        ERRORPRINT("%s\n", "UNIMPLEMENTED");
+
+        return GS_ERROR;
     #endif /* defined(_WIN32) */
 
     _gs_ready++;
@@ -340,7 +355,10 @@ GS_STATUS gs_quit(void) {
         }
     }
 
-    _gs_config.out_callback(0, _GS_LPT_DATA);
+    _try {
+        _gs_config.out_callback(0, _GS_LPT_DATA);
+    }
+    _catch (e);
 
     _gs_config.port = 0;
     _gs_config.port_dev = NULL;
@@ -358,9 +376,15 @@ GS_STATUS gs_quit(void) {
         ioctl(_gs_port_fd, PPRELEASE);
         close(_gs_port_fd);
         _gs_port_fd = -1;
-    #else /* !defined(_WIN32) */
-        /* Other UNIX-like environments */
+    #elif defined(HAS_SYSIO_H)
+        /* Other UNIX-like environments with low-level IO */
         ioperm(_GS_LPT_DATA, 2, 0);
+    #else /* !defined(_WIN32) */
+        /* Unknown, unsupported */
+        /* Do not use the UNIMPLEMENTED() macro here; no try/catch sugar */
+        ERRORPRINT("%s\n", "UNIMPLEMENTED");
+
+        return GS_ERROR;
     #endif /* defined(_WIN32) */
 
     return GS_SUCCESS;
@@ -375,7 +399,7 @@ GS_STATUS gs_enter(void) {
 
     DEBUGPRINT("%s\n", "Entering...");
 
-    _try (e) {
+    _try {
         while (--timeout) {
             /*
              * Repeatedly send 0x3 until we receive 'g'.
@@ -391,7 +415,7 @@ GS_STATUS gs_enter(void) {
         }
         if (!timeout) TIMEOUT();
     }
-    _catch {
+    _catch (e) {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
 
         return GS_ERROR;
@@ -404,10 +428,10 @@ GS_STATUS gs_enter(void) {
 GS_STATUS gs_exit(void) {
     assert(_gs_ready);
 
-    _try (e) {
+    _try {
         _gs_cmd(GS_CMD_UNPAUSE);
     }
-    _catch {
+    _catch (e) {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
 
         return GS_ERROR;
@@ -420,10 +444,10 @@ GS_STATUS gs_exit(void) {
 GS_STATUS gs_read(uint8_t *in, GS_RANGE *range, void (*callback)(int, uint32_t)) {
     assert(_gs_ready);
 
-    _try (e) {
+    _try {
         _gs_mem(in, range, callback, false);
     }
-    _catch {
+    _catch (e) {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
 
         return GS_ERROR;
@@ -436,10 +460,10 @@ GS_STATUS gs_read(uint8_t *in, GS_RANGE *range, void (*callback)(int, uint32_t))
 GS_STATUS gs_write(uint8_t *out, GS_RANGE *range, void (*callback)(int, uint32_t)) {
     assert(_gs_ready);
 
-    _try (e) {
+    _try {
         _gs_mem(out, range, callback, true);
     }
-    _catch {
+    _catch (e) {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
 
         return GS_ERROR;
@@ -452,13 +476,13 @@ GS_STATUS gs_write(uint8_t *out, GS_RANGE *range, void (*callback)(int, uint32_t
 GS_STATUS gs_where(uint8_t *out) {
     assert(_gs_ready);
 
-    _try (e) {
+    _try {
         _gs_cmd(GS_CMD_WHERE);
 
         /* Returns GS_WHERE_MENU when in the menu, GS_WHERE_GAME when in game */
         *out = _gs_exch_8(0);
     }
-    _catch {
+    _catch (e) {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
 
         return GS_ERROR;
@@ -475,7 +499,7 @@ GS_STATUS gs_version(uint8_t *size, char *version, int buf_size) {
     assert(_gs_ready);
     assert(buf_size > 0); /* We need a buffer with valid size */
 
-    _try (e) {
+    _try {
         _gs_cmd(GS_CMD_VERSION);
 
         /* FIXME: Verify this... */
@@ -505,7 +529,7 @@ GS_STATUS gs_version(uint8_t *size, char *version, int buf_size) {
         /* Append null-terminator to version string */
         version[buf_size - 1] = '\0';
     }
-    _catch {
+    _catch (e) {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
 
         return GS_ERROR;
@@ -521,46 +545,53 @@ GS_STATUS gs_read_rom(uint8_t *data, GS_RANGE *range, void (*callback)(uint32_t)
     uint8_t calc_sum = 0;
     uint32_t word = 0;
 
-    _gs_cmd(GS_CMD_READ_ROM);
+    _try {
+        _gs_cmd(GS_CMD_READ_ROM);
 
-    /* Send address */
-    range->address &= ~3;
-    DEBUGPRINT("Address: 0x%08X\n", range->address);
-    _gs_exch_32(range->address);
+        /* Send address */
+        range->address &= ~3;
+        DEBUGPRINT("Address: 0x%08X\n", range->address);
+        _gs_exch_32(range->address);
 
-    /* Send data size */
-    range->size = (range->size + 3) & ~3;
-    DEBUGPRINT("Size: 0x%08X\n", range->size);
-    _gs_exch_32(range->size);
+        /* Send data size */
+        range->size = (range->size + 3) & ~3;
+        DEBUGPRINT("Size: 0x%08X\n", range->size);
+        _gs_exch_32(range->size);
 
-    /* Read data */
-    for (i = 0; i < range->size; i += 4) {
-        /* Run callback periodically */
-        if (callback && i && (!(i & 0x3FFF))) {
+        /* Read data */
+        for (i = 0; i < range->size; i += 4) {
+            /* Run callback periodically */
+            if (callback && i && (!(i & 0x3FFF))) {
+                callback(i);
+            }
+
+            word = _gs_exch_32(0);
+            sum += word;
+
+            data[i + 0] = word >> 24;
+            data[i + 1] = word >> 16;
+            data[i + 2] = word >> 8;
+            data[i + 3] = word >> 0;
+        }
+
+        /* Final callback */
+        if (callback && (i & 0x3FFF)) {
             callback(i);
         }
 
-        word = _gs_exch_32(0);
-        sum += word;
+        /* Verify */
+        calc_sum = _gs_exch_8(0);
+        if (calc_sum != sum) {
+            ERRORPRINT("Checksum failure during ROM read:\n"
+                "  Received: 0x%02X\n"
+                "  Expected: 0x%02X\n",
+                calc_sum, sum);
 
-        data[i + 0] = word >> 24;
-        data[i + 1] = word >> 16;
-        data[i + 2] = word >> 8;
-        data[i + 3] = word >> 0;
+            return GS_ERROR;
+        }
     }
-
-    /* Final callback */
-    if (callback && (i & 0x3FFF)) {
-        callback(i);
-    }
-
-    /* Verify */
-    calc_sum = _gs_exch_8(0);
-    if (calc_sum != sum) {
-        ERRORPRINT("Checksum failure during ROM read:\n"
-            "  Received: 0x%02X\n"
-            "  Expected: 0x%02X\n",
-            calc_sum, sum);
+    _catch (e) {
+        ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
 
         return GS_ERROR;
     }
