@@ -1,5 +1,6 @@
 .sconf_temp
 .sconsign*
+config.log
 n64rd
 n64rd.exe
 *.o
