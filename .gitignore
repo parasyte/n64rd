@@ -1,6 +1,15 @@
+## OS X
+.DS_Store
+._*
+.Trashes
+.Spotlight*
+
+## SCons
 .sconf_temp
 .sconsign*
 config.log
+
+## Executables
 n64rd
 n64rd.exe
 *.o
