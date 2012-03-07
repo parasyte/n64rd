@@ -41,7 +41,7 @@ extern int _exception_stack;
     if (_e)
 
 #define _throw(_e) \
-    if (_exception_stack >= _EXCEPTION_LIST_SIZE) { \
+    if (_exception_stack >= (_EXCEPTION_LIST_SIZE - 1)) { \
         fprintf(stderr, "FATAL: TOO MANY NESTED EXCEPTIONS\n"); \
         abort(); \
     } \
