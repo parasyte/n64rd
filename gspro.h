@@ -81,6 +81,22 @@ GS_STATUS gs_read_rom(uint8_t *data, GS_RANGE *range, void (*callback)(uint32_t)
 #define ERRORPRINT(_fmt, ...) \
     fprintf(stderr, "%s:%d, %s() ERROR: " _fmt, __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
 
+#if !defined(MIN)
+    #define MIN(a, b) ({ \
+        __typeof__ (a) _a = (a); \
+        __typeof__ (b) _b = (b); \
+        _a < _b ? _a : _b; \
+    })
+#endif
+
+#if !defined(MAX)
+    #define MAX(a, b) ({ \
+        __typeof__ (a) _a = (a); \
+        __typeof__ (b) _b = (b); \
+        _a > _b ? _a : _b; \
+    })
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

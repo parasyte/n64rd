@@ -497,7 +497,9 @@ GS_STATUS gs_version(uint8_t *size, char *version, int buf_size) {
     uint8_t buf = 0;
 
     assert(_gs_ready);
-    assert(buf_size > 0); /* We need a buffer with valid size */
+    assert(buf_size > 1); /* We need a buffer with valid size */
+
+    buf_size--; /* Allocate one byte for the null-terminator */
 
     _try {
         _gs_cmd(GS_CMD_VERSION);
@@ -527,7 +529,7 @@ GS_STATUS gs_version(uint8_t *size, char *version, int buf_size) {
         }
 
         /* Append null-terminator to version string */
-        version[buf_size - 1] = '\0';
+        version[MIN(buf_size, i)] = '\0';
     }
     _catch (e) {
         ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
