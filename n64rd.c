@@ -63,7 +63,7 @@
 
 /* Application information */
 #define NAME "n64rd"
-#define VERSION "v0.1"
+#define VERSION "v0.2"
 
 /* Application options (from command line arguments) */
 struct _options {
