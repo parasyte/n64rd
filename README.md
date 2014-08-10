@@ -48,6 +48,7 @@ Running
                     Copy <length> bytes from memory <address> (to [file]).
       -w <file>     Write memory;
                     Copy from <file> to memory <address>.
+      -u <file>     Upgrade ROM with given file.
 
 Points of Interest
 ------------------
