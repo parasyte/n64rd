@@ -29,25 +29,25 @@
 /* Handy macros */
 #define GS_MACRO_0(_FUNC) \
     if (_FUNC()) { \
-        fprintf(stderr, "%s() " #_FUNC "() failed\n", __FUNCTION__); \
+        fprintf(stderr, "%s(): " #_FUNC "() failed\n", __FUNCTION__); \
         return 1; \
     }
 
 #define GS_MACRO_1(_FUNC, _ARG) \
     if (_FUNC((_ARG))) { \
-        fprintf(stderr, "%s() " #_FUNC "() failed\n", __FUNCTION__); \
+        fprintf(stderr, "%s(): " #_FUNC "() failed\n", __FUNCTION__); \
         return 1; \
     }
 
 #define GS_MACRO_2(_FUNC, _ARG1, _ARG2) \
     if (_FUNC((_ARG1), (_ARG2))) { \
-        fprintf(stderr, "%s() " #_FUNC "() failed, " #_ARG2 "=0x%X\n", __FUNCTION__, (_ARG2)); \
+        fprintf(stderr, "%s(): " #_FUNC "() failed\n", __FUNCTION__); \
         return 1; \
     }
 
 #define GS_MACRO_3(_FUNC, _ARG1, _ARG2, _ARG3) \
     if (_FUNC((_ARG1), (_ARG2), (_ARG3))) { \
-        fprintf(stderr, "%s() " #_FUNC "() failed\n", __FUNCTION__); \
+        fprintf(stderr, "%s(): " #_FUNC "() failed\n", __FUNCTION__); \
         return 1; \
     }
 
@@ -57,6 +57,7 @@
 #define GS_WRITE(_a, _b, _c)    GS_MACRO_3(gs_write, _a, _b, _c)
 #define GS_WHERE(_a)            GS_MACRO_1(gs_where, _a)
 #define GS_VERSION(_a, _b, _c)  GS_MACRO_3(gs_version, _a, _b, _c)
+#define GS_UPGRADE(_a, _b)      GS_MACRO_2(gs_upgrade, _a, _b)
 #define GS_READ_ROM(_a, _b, _c) GS_MACRO_3(gs_read_rom, _a, _b, _c)
 
 
@@ -74,6 +75,7 @@ struct _options {
     bool        read_word;
     bool        write;
     char *      write_file;
+    char *      upgrade_file;
     uint32_t    address;
     uint32_t    length;
 };
@@ -84,7 +86,9 @@ void usage(void);
 void parse_error(char *string, int location);
 void cleanup(void);
 void *alloc(size_t size);
+size_t fsizeof(FILE *fp);
 int detect(void);
+int upgrade(char *filename);
 int read_data(char *filename, uint32_t address, uint32_t size, bool word);
 int write_data(char *filename, uint32_t address);
 void hex_dump(uint8_t *data, uint32_t address, uint32_t size);
@@ -107,7 +111,7 @@ int main(int argc, char **argv) {
     options.address = 0x80000000;
     options.length = 0x00400000;
 
-    while ((c = getopt(argc, argv, "hp:va:l:d::r::w:")) != -1) {
+    while ((c = getopt(argc, argv, "hp:va:l:d::r::w:u:")) != -1) {
         switch (c) {
             case 'h':
                 usage();
@@ -158,6 +162,10 @@ int main(int argc, char **argv) {
                 options.write_file = optarg;
                 break;
 
+            case 'u':
+                options.upgrade_file = optarg;
+                break;
+
             case '?':
                 if ((optopt == 'p') ||
                     (optopt == 'a') ||
@@ -205,6 +213,9 @@ int main(int argc, char **argv) {
     if (options.write) {
         write_data(options.write_file, options.address);
     }
+    if (options.upgrade_file) {
+        upgrade(options.upgrade_file);
+    }
 
     return 0;
 }
@@ -225,6 +236,7 @@ void usage(void) {
     printf("                Copy <length> bytes from memory <address> (to [file]).\n");
     printf("  -w <file>     Write memory;\n");
     printf("                Copy from <file> to memory <address>.\n");
+    printf("  -u <file>     Upgrade ROM with given file.\n");
 }
 
 void parse_error(char *string, int location) {
@@ -252,6 +264,15 @@ void *alloc(size_t size) {
     return p;
 }
 
+size_t fsizeof(FILE *fp) {
+    size_t cur = ftell(fp);
+    fseek(fp, 0, SEEK_END);
+    size_t size = ftell(fp);
+    fseek(fp, cur, SEEK_SET);
+
+    return size;
+}
+
 int detect(void) {
     uint8_t version_size = 0;
     char version[64] = { 0 };
@@ -264,6 +285,32 @@ int detect(void) {
         DEBUGPRINT("%d bytes required, %lu bytes available\n", version_size + 1, sizeof(version));
     }
     printf("Detected: %s\n", version);
+
+    return 0;
+}
+
+int upgrade(char *filename) {
+    FILE *fp;
+    size_t size;
+    uint8_t *data;
+    uint32_t buf_size;
+
+    /* Read file data */
+    /* FIXME: Add error handling */
+    fp = fopen(filename, "rb");
+    buf_size = size = fsizeof(fp);
+    data = alloc(size);
+    fread(data, 1, size, fp);
+    fclose(fp);
+
+    printf("Uploading `%s`...\n", filename);
+
+    GS_ENTER();
+    GS_UPGRADE(data, buf_size);
+
+    printf("Upgrade complete\n");
+
+    free(data);
 
     return 0;
 }
@@ -353,10 +400,8 @@ int write_data(char *filename, uint32_t address) {
     /* Read file data */
     /* FIXME: Add error handling */
     fp = fopen(filename, "rb");
-    fseek(fp, 0, SEEK_END);
-    range[0].size = ftell(fp);
+    range[0].size = fsizeof(fp);
     data = alloc(range[0].size);
-    fseek(fp, 0, SEEK_SET);
     fread(data, 1, range[0].size, fp);
     fclose(fp);
 

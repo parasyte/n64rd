@@ -95,4 +95,4 @@ a lot of time, if you know the exact ROM size.
 
 Dump the GS ROM with:
 
-    $ ./n64rd -dgs.n64 -a 0xBE000000 -l 0x00020000
+    $ ./n64rd -dgs.n64 -a 0xBEC00000 -l 0x00040000

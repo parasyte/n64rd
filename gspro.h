@@ -29,16 +29,22 @@ typedef struct _gs_range GS_RANGE;
 
 /* GameShark commands */
 enum _gs_commands {
+    GS_CMD_NULL         = -1,
     GS_CMD_PAUSE        = 0x00, /* Unimplemented */
     GS_CMD_READ         = 0x01,
     GS_CMD_WRITE        = 0x02,
     GS_CMD_UNPAUSE      = 0x64,
     GS_CMD_WHERE        = 0x65,
     GS_CMD_VERSION      = 0x66,
+    GS_CMD_UPGRADE_SWAP = 0x67, /* Unimplemented */
     GS_CMD_ADD_CODE     = 0x69, /* Unimplemented */
     GS_CMD_COUNT_CODES  = 0x6A, /* Unimplemented */
+    GS_CMD_UPGRADE      = 0x6E,
     GS_CMD_GET_CODES    = 0x70, /* Unimplemented */
     GS_CMD_SCREEN_SHOT  = 0x72, /* Unimplemented */
+    GS_CMD_WRITE_CODES  = 0x7C, /* Unimplemented */
+    GS_CMD_READ_CODES   = 0x7D, /* Unimplemented */
+    GS_CMD_READ_MEMPAK  = 0x7E, /* Unimplemented */
     GS_CMD_READ_ROM     = 0x7F
 };
 typedef enum _gs_commands GS_COMMAND;
@@ -66,6 +72,7 @@ GS_STATUS gs_read(uint8_t *in, GS_RANGE *range, void (*callback)(int, uint32_t))
 GS_STATUS gs_write(uint8_t *out, GS_RANGE *range, void (*callback)(int, uint32_t));
 GS_STATUS gs_where(uint8_t *out);
 GS_STATUS gs_version(uint8_t *size, char *version, int buf_size);
+GS_STATUS gs_upgrade(uint8_t *buffer, uint32_t buf_size);
 GS_STATUS gs_read_rom(uint8_t *data, GS_RANGE *range, void (*callback)(uint32_t));
 
 

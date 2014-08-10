@@ -59,6 +59,7 @@ enum _exception_types {
 
 /* Private variables */
 static int _gs_ready = 0;
+static int _gs_timeout = 100000;
 static GS_CONFIG _gs_config = { 0 };
 
 
@@ -123,12 +124,14 @@ void _gs_out(uint8_t data, uint16_t port) {
 
 /* Send one nybble, and receive another */
 uint8_t _gs_exch_4(uint8_t out) {
-    int timeout = 100000;
+    int timeout;
     uint8_t data = 0;
 
     /* Wait until hardware is ready to receive a nybble */
     if (_gs_config.in_callback(_GS_LPT_STAT) & 0x08) {
         _gs_config.out_callback(0, _GS_LPT_DATA);
+
+        timeout = _gs_timeout;
         while ((--timeout) && (_gs_config.in_callback(_GS_LPT_STAT) & 0x08));
         if (!timeout) TIMEOUT();
     }
@@ -138,7 +141,7 @@ uint8_t _gs_exch_4(uint8_t out) {
     _gs_config.out_callback((out & 0x0F) | 0x10, _GS_LPT_DATA);
 
     /* Wait until hardware is ready to send a nybble */
-    timeout = 100000;
+    timeout = _gs_timeout;
     while ((--timeout) && (!(_gs_config.in_callback(_GS_LPT_STAT) & 0x08)));
     if (!timeout) TIMEOUT();
 
@@ -180,7 +183,7 @@ uint32_t _gs_exch_32(uint32_t out) {
 
 /* Send command to GS */
 void _gs_cmd(GS_COMMAND cmd) {
-    int timeout = 1000;
+    int timeout = _gs_timeout;
 
     DEBUGPRINT("Sending command: 0x%02X\n", cmd);
 
@@ -193,7 +196,9 @@ void _gs_cmd(GS_COMMAND cmd) {
     }
     if (!timeout) TIMEOUT();
 
-    _gs_exch_8(cmd);
+    if (cmd >= 0) {
+        _gs_exch_8(cmd);
+    }
 }
 
 /* Send or receive data using READ or WRITE command */
@@ -358,7 +363,9 @@ GS_STATUS gs_quit(void) {
     _try {
         _gs_config.out_callback(0, _GS_LPT_DATA);
     }
-    _catch (e);
+    _catch (e) {
+        // Pass
+    };
 
     _gs_config.port = 0;
     _gs_config.port_dev = NULL;
@@ -538,6 +545,75 @@ GS_STATUS gs_version(uint8_t *size, char *version, int buf_size) {
     }
 
     return GS_SUCCESS;
+}
+
+/* Upload ROM data to be written to the on-board EEPROM */
+GS_STATUS gs_upgrade(uint8_t *buffer, uint32_t buf_size) {
+    int i;
+    uint16_t sum = 0;
+    uint16_t calc_sum = 0;
+
+    assert(_gs_ready);
+    assert(buf_size > 0); /* We need a buffer with valid size */
+
+    /* Force max size to 256KB */
+    if (buf_size > 0x00040000) {
+        buf_size = 0x00040000;
+    }
+
+    _try {
+        _gs_cmd(GS_CMD_UPGRADE);
+        _gs_cmd(GS_CMD_NULL);
+
+        /* Send data size */
+        _gs_exch_32(buf_size);
+
+        /* Send data */
+        for (i = 0; i < buf_size; i++) {
+            _gs_exch_8(buffer[i]);
+            sum += buffer[i];
+        }
+
+        /* Verify */
+        sum &= 0x0FFF;
+        calc_sum = (_gs_exch_8(sum) | (_gs_exch_8(sum >> 8) << 8)) & 0x0FFF;
+        if (calc_sum != sum) {
+            ERRORPRINT("Checksum failure during ROM upload:\n"
+                "  Received: 0x%02X\n"
+                "  Expected: 0x%02X\n",
+                calc_sum, sum);
+
+            return GS_ERROR;
+        }
+        /* GS sends 0x01 to indicate the checksum is valid */
+        if (_gs_exch_8(0) != 1) {
+            ERRORPRINT("%s\n", "Updater could not verify checksum");
+
+            return GS_ERROR;
+        }
+
+        DEBUGPRINT("%s\n", "Upload complete. Waiting for final response...");
+
+        sleep(5);
+
+        /* GS sends 0x01 to indicate the ROM upgrade was successful */
+        if (_gs_exch_8(0) != 1) {
+            ERRORPRINT("%s\n", "Could not validate ROM after write");
+
+            return GS_ERROR;
+        }
+
+        return GS_SUCCESS;
+    }
+    _catch (e) {
+        ERRORPRINT("%s:%d, %s(): %s\n", e->file, e->line, e->function, e->msg);
+
+        return GS_ERROR;
+    }
+
+    ERRORPRINT("%s\n", "Undefined error (Should never happen).");
+
+    return GS_ERROR;
 }
 
 /* Read CPU memory 32-bits at a time (and exit PC-control) */
