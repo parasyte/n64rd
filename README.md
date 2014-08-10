@@ -28,10 +28,10 @@ Running
 -------
 
     $ n64rd -h
-    n64rd v0.1
+    n64rd v0.2
     By Parasyte (parasyte@kodewerx.org)
     Website: http://www.kodewerx.org/
-    Build date: Feb 27 2012, 01:28:39
+    Build date: Aug 10 2014, 12:31:45
 
     Usage: n64rd [options]
     Options:
