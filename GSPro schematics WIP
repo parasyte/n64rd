@@ -1,0 +1,37 @@
+Very unfinished GameShark Pro Schematics.
+
+This schematics were done when I tried to fix a bricked GSPro and accidentally destroyed part of the board.
+In no way this is complete! 
+It's just a basic scratch that I'm sharing in the hope that this can help someone else in the future.
+Unfortunatelly it can have some mistakes. 
+Please, feel free to add more information and/or correct mistakes.
+
+                                __    __ 
+        A7 A6 A5 A4 A3 A2 A1 A0 CE    OE
+    +--------------------------------------------------------------+
+    |   51 50 49 48 47 46 45 44 43 42 41 40 39 38 37 36 35 34 33   |
+ A8-|52                                                          32|
+ A9-|53                                                          31|
+A10-|54                                                          30|
+A11-|55                                                          29| 
+A12-|56                                                          28|
+Vcc-|57                                                          27|
+Gnd-|58                    DATEL  GAL                            26|
+A13-|59                   ACTION REPLAY                          25|
+A14-|60                                                          24|
+A15-|61                                                          23|
+A16-|62                                                          22|-D0 +
+A17-|63                                                          21|-D1 |
+A18-|64                                                          20|-D2 |
+    | O 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19   |    | 
+    +--------------------------------------------------------------+    |
+           D7 D6 D5 D4 /W /R D3 D2 D1 D0    D7 D6 D5 D4       D3        | 
+           |__________      __________|     |___________________________ LOW
+                       HIGH
+                     
+Notes:
+1- The ROMs data pins D0~D7 are also connected on the cartridge bus.
+The Low ROM pins D0 to D7 are connected to AD0 to AD7, the high ROM pins D0 to D7 are connedted AD8 to AD15.
+2- The ROMS /WE pins are connected to te pin /W, that I abbreviated from /Write (pin 8), /R I abbreviated from /Read (pin 10).
+Both these pins are from the cartridge bus.
+3- Pin 12 is connected to the pin /Cold_reset (pin 20), on the cartridge bus.
