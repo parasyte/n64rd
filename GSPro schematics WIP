@@ -1,0 +1,127 @@
+Very unfinished GameShark Pro Schematics.
+ 
+This schematics were done when I tried to fix a bricked GSPro and accidentally destroyed part of the board.
+In no way this is complete! 
+It's just a basic scratch that I'm sharing in the hope that this can help someone else in the future.
+Unfortunatelly it can have some mistakes. 
+Please, feel free to add more information and/or correct mistakes. 
+
+                                                     G 
+                                __    __       __    N 
+        A7 A6 A5 A4 A3 A2 A1 A0 CE    OE       CP CO D  AB
+    +--------------------------------------------------------------+
+    |   51 50 49 48 47 46 45 44 43 42 41 40 39 38 37 36 35 34 33   |
+ A8-|52                                                          32|
+ A9-|53                                                          31|           10K
+A10-|54                                                          30|-DB25 (6)--/\/\--Gnd
+A11-|55                                                          29|-DB25 (5) 
+A12-|56                                                          28|-DB25 (4)
+Vcc-|57                     LZ9FC17                              27|-DB25 (3)
+Gnd-|58                    DATEL  GAL                            26|-Gnd
+A13-|59                   ACTION REPLAY                          25|-Vcc
+A14-|60                     9907EA                               24|-DB25 (2)
+A15-|61                                                          23|-/GSButton 
+A16-|62                                                          22|-D0 +
+A17-|63                                                          21|-D1 |
+A18-|64                                                          20|-D2 |
+    | O 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19   |    | 
+    +--------------------------------------------------------------+    |
+           D7 D6 D5 D4 /W /R D3 D2 D1 D0 /C D7 D6 D5 D4 AH AL D3        | 
+           |__________      __________|     |___________________________ LOW
+                       HIGH
+
+Notes:
+1- The ROMs data pins D0~D7 are also connected on the cartridge bus.
+The Low ROM pins D0 to D7 are connected to AD0 to AD7, the high ROM pins D0 to D7 are connedted AD8 to AD15.
+2- The ROMS /WE pins are connected to te pin /W, that I abbreviated from /Write (pin 8), /R I abbreviated from /Read (pin 10).
+Both these pins are from the cartridge bus.
+3- Pin 12 is connected to the pin /Cold_reset (pin 20), on the cartridge bus.
+
+Abbreviatures I used in this "draw":
+/W -> /Write
+/R -> /Read 
+/C -> /Cold_Reset
+AH -> ALE_H
+AL -> ALE_L
+/CP -> 74HC374 CP (Pin 11),Inverted by 74HC04
+CO -> 74HC164 CLK (Pin 8), with a 10k pullup resistor
+AB -> 74HC164 A (Pin1) and B (Pin2)
+74HC164 MR (Pin 9) -> pulled high
+
+The 7 segment dysplay is connected to 74HC164 through resistors as follows:
+
+        Pin 06
+        ------
+Pin 10 |      | Pin 13
+        -----
+        Pin 11  
+Pin12  |      | Pin04
+        ------   () Pin03 
+        Pin 13   
+
+The 74HC374:
+          +--\/--+ 
+      GND-|01  20|-Vcc
+DB25 (13)-|02  19|-UNK (4)
+      AD0-|03  18|-AD7
+      AD1-|04  17|-AD6
+DB25 (12)-|05  16|-UNK (6)
+DB25 (10)-|06  15|-UNK (7)
+      AD2-|07  14|-AD5
+      AD3-|08  13|-AD4
+DB25 (11)-|09  12|-DB25 (15)
+      GND-|10  11|-74HC04 (02)
+          +------+
+
+Notes:
+1- I've found only 10 connections (excluding GND) on the DB25 connector.
+Possibly I'm missing something...
+2- The UNK is the abbreviation I used to a unknown chip that should be just under the GSButton.
+I have no idea of what this was supposed to be. It's pins are as follow:
+
+      VCC--1    8--GND
+ GAL (31)--2    7--374 (15)
+ GAL (32)--3    6--374 (16)
+ 374 (19)--4    5--NC
+
+3- There's also space for something I don't know what should be on the left of the GSButton.
+This could be some resistors, some capacitors, a bicolor led or even another push-button... 
+Who knows... It's pins are as follows:
+
+GAL (32)-[]  []
+              +--Vcc
+GAL (31)-[]  []
+
+The DB25 connector (well, what I could figure out):
+        ____
+       |    \
+       |o01  \
+       |   14o|  
+GAL(24)|o02   |
+       |   15o| 374(12)
+GAL(27)|o03   | 
+       |   16o|
+GAL(28)|o04   | 
+       |   17o|
+GAL(29)|o05   |
+       |   18o| GND
+GAL(30)|o06   |
+       |   19o| GND
+       |o07   |
+       |   20o| GND
+       |o08   | 
+       |   21o| GND
+       |o09   | 
+       |   22o| GND
+374(06)|o10   |
+       |   23o| GND
+374(09)|o11   |
+       |   24o| GND
+374(05)|o12   | 
+       |   25o| GND
+374(02)|o13   /
+       |     /
+       ------ 
+Notes:
+1- When I put a number inside a parenthesis, I'm refering to the IC I wrote, and the pin number inside the parentesis.
+Sorry if the ASCII art aren't the best, but that was what I could come with, at least for now...
